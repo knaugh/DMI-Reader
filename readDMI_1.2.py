@@ -63,6 +63,8 @@ class SerialReader:
     def extract(self):
         # This function is called when "Extract" button pressed and prepares for communication by generating an output file
         try:
+            if self.userport==None:
+                raise IOError
             # parse user input into a file path
             self.outlog.see("end")
             self.userfile = self.filename_textbox.get()
@@ -100,7 +102,11 @@ class SerialReader:
             
 
             
-            
+        except IOError as e:
+            self.outlog.insert(
+                END,
+                ">> ERROR\n>>>> No device plugged in. Please connect and press refresh\n"
+            )  
         except OSError as e:
             self.outlog.insert(
                 END,
