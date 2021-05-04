@@ -23,7 +23,7 @@ class SerialReader:
         self.comport_textbox = comport_textbox
         self.filename_textbox = filename_textbox
         self.userport = self.checkports()
-    
+
     def checkports(self):
         """This function looks at all COM ports and identifies the USB device
          (which we assume is ours bc i am bad at this)
@@ -63,18 +63,20 @@ class SerialReader:
     def extract(self):
         # This function is called when "Extract" button pressed and prepares for communication by generating an output file
         try:
-            if self.userport==None:
+            if self.userport == None:
                 raise IOError
             # parse user input into a file path
             self.outlog.see("end")
             self.userfile = self.filename_textbox.get()
-            
+
             # handle if they forgot to type
             if self.userfile == "":
                 self.outlog.insert(END, ">>You must insert a desired file name\n")
                 return
             workdir = os.getcwd()
-            self.microfile = os.path.join(workdir, "OUTPUT", f"{self.userfile}_microstation.txt")
+            self.microfile = os.path.join(
+                workdir, "OUTPUT", f"{self.userfile}_microstation.txt"
+            )
             self.userfile = os.path.join(workdir, "OUTPUT", f"{self.userfile}.txt")
             # create directory
             os.makedirs(os.path.dirname(self.userfile), exist_ok=True)
@@ -84,7 +86,7 @@ class SerialReader:
                 file.write("DMI OUTPUT LOG \n")
             with open(self.microfile, "w") as file:
                 file.write("place point\n")
-            
+
             # prompt user to turn on DMI
             self.outlog.insert(
                 END,
@@ -93,43 +95,34 @@ class SerialReader:
             self.outlog.see("end")
 
             # call the threadread function in
-        
+
             threading.Thread(target=self.threadread).start()
 
-           
-            
-                        
-            
-
-            
         except IOError as e:
             self.outlog.insert(
                 END,
-                ">> ERROR\n>>>> No device plugged in. Please connect and press refresh\n"
-            )  
+                ">> ERROR\n>>>> No device plugged in. Please connect and press refresh\n",
+            )
         except OSError as e:
             self.outlog.insert(
                 END,
                 ">> ERROR\n>>>>Invalid filename. Do not use special characters or spaces.\n",
             )
-            
+
         except serial.SerialException as e:
             self.outlog.insert(
                 END,
                 ">> ERROR\n>>>>Serial error. Please unplug any USB devices and try again\n",
             )
-            
-            
+
         except Exception as e:
             self.outlog.insert(
                 END, ">> ERROR\n>>>>Unkown error. Please restart and try again\n"
             )
-            
-            
 
     def threadread(self):
         # this function performs the CPU intesive communication in a seperate thread so GUI doesn't hang
-            # open serial com line
+        # open serial com line
         try:
             ser = serial.Serial(self.userport)
             has_begun = False
@@ -137,7 +130,7 @@ class SerialReader:
             line = ""
             # read every byte
             while ser.is_open:
-                
+
                 byte = ser.read()
 
                 # has_begun gives us a way to time out because the DMI will keep sending junk after info is transferred
@@ -156,13 +149,15 @@ class SerialReader:
                     line = ""
                     has_begun = True
             # Only makes it here if everything works
-            #download complete
+            # download complete
             self.processdata()
             self.outlog.insert(
-            END, ">> DOWNLOAD COMPLETE\n>>>>You may close the window\n"
+                END, ">> DOWNLOAD COMPLETE\n>>>>You may close the window\n"
             )
             self.outlog.insert(END, f">>>>Raw output file saved to {self.userfile}\n")
-            self.outlog.insert(END, f">>>>Microstation file saved to {self.microfile}\n")
+            self.outlog.insert(
+                END, f">>>>Microstation file saved to {self.microfile}\n"
+            )
             self.outlog.see("end")
         except serial.SerialException:
             self.outlog.insert(
@@ -173,26 +168,26 @@ class SerialReader:
                 END, ">> ERROR\n>>>>Unkown Error: Please restart and try again"
             )
             print(e)
-            
-    def processdata(self):
-        #generates text file that can be imported into microstation
-        with open(self.microfile, "a") as outfile:
-                with open(self.userfile, "r") as infile:
-                    linelist=infile.readlines() 
-                    for l in linelist[2:]:
-                        tmp=l.split()
-                        outfile.write(f"point acsabsolute {tmp[4]}, {tmp[3]};\n")
-                    outfile.write("reset")        
 
-                    
+    def processdata(self):
+        # generates text file that can be imported into microstation
+        with open(self.microfile, "a") as outfile:
+            with open(self.userfile, "r") as infile:
+                linelist = infile.readlines()
+                for l in linelist[2:]:
+                    tmp = l.split()
+                    outfile.write(f"point acsabsolute {tmp[4]}, {tmp[3]};\n")
+                outfile.write("reset")
+
+
 # GOOEY BELOW THIS POINT
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # build window
     top = Tk()
     top.title("DMI Extractor")
     top.geometry("680x500")
-    
+
     # static text on left
     L1 = Label(top, text="COM Port:")
     L1.grid(padx=10, row=0, column=0, sticky=W)
@@ -200,31 +195,30 @@ if __name__ == '__main__':
     L2.grid(padx=10, row=1, column=0, sticky=W)
     L3 = Label(top, text="Microdynamics DOTZ1 PRO")
     L3.grid(row=0, column=9, sticky=E)
-    
+
     # draw log box with scroll wheel
     outlog = Text(state=NORMAL, width=80)
     outlog.grid(columnspan=10, row=2, rowspan=50, padx=10, pady=5)
     scrollb = Scrollbar(command=outlog.yview)
     scrollb.grid(row=2, column=10, rowspan=50, sticky=NSEW)
     scrollb = outlog["yscrollcommand"] = scrollb.set
-    
+
     # text boxes in the middle
     comport_textbox = Entry(state=DISABLED)
     comport_textbox.grid(row=0, column=1, padx=5, pady=5, sticky=NSEW)
     filename_textbox = Entry()
     filename_textbox.grid(row=1, column=1, padx=5, pady=5, sticky=NSEW)
-    
+
     sr = SerialReader(outlog, comport_textbox, filename_textbox)
-    
+
     # Buttons on the right
     btn1 = Button(top, text="Refresh", command=lambda: sr.checkports())
     btn1.grid(row=0, column=2, sticky=NSEW, padx=5, pady=5)
     btn2 = Button(top, text="Extract", command=lambda: sr.extract())
     btn2.grid(row=1, column=2, sticky=NSEW, padx=5, pady=5)
-    
+
     # binding box to enter to start extraction
     filename_textbox.bind("<Return>", lambda _: sr.extract())
-    
+
     # check com ports on startup and loop gui
     top.mainloop()
-    
