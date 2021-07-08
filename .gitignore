@@ -1,2 +1,4 @@
 OUTPUT/
 dist/readDMI_1.2.exe
+BUILD/
+readDMI_1.2.spec
